@@ -979,12 +979,12 @@ impl BddManager {
                 [] => { 
                     let margvar_bits = BitSet::new();
                     let possible_best = self.marginal_map_eval(ptr, &cur_assgn, &margvar_bits, wmc);
-                    println!("eval on assignment {:?}, got {possible_best}", cur_assgn);
+                    // println!("eval on assignment {:?}, got {possible_best}", cur_assgn);
                     if possible_best > cur_lb {
-                        println!("new best found");
+                        // println!("new best found");
                         (possible_best, cur_assgn)
                     } else {
-                        println!("old best kept");
+                        // println!("old best kept");
                         (cur_lb, cur_best)
                     }
                 }, 
