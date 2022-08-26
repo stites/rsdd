@@ -144,7 +144,6 @@ mod test_graphviz {
     }
     type MyReturn = Vec<((BddPtr, (String, PointerType)), (BddPtr, (String, PointerType)))>;
     pub fn call_recursive_bfs(mgr: &MyBddManager, ptr: BddPtr) -> MyReturn {
-        use crate::builder::repr::builder_bdd::PointerType::*;
         fn bfs_recursively(
             mgr: &MyBddManager,
             optr: Option<BddPtr>,
@@ -155,9 +154,9 @@ mod test_graphviz {
                 None => edges.to_vec(),
                 Some(ptr) => {
                     match ptr.ptr_type() {
-                        PtrTrue  => bfs_recursively(mgr, queue.pop(), queue, edges),
-                        PtrFalse => bfs_recursively(mgr, queue.pop(), queue, edges),
-                        PtrNode => {
+                        PointerType::PtrTrue  => bfs_recursively(mgr, queue.pop(), queue, edges),
+                        PointerType::PtrFalse => bfs_recursively(mgr, queue.pop(), queue, edges),
+                        PointerType::PtrNode => {
                             let lp = mgr.low(ptr);
                             let hp = mgr.high(ptr);
                             let parent = (ptr, my_get_label(mgr, ptr));
