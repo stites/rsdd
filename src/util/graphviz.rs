@@ -1,5 +1,6 @@
 use crate::builder::repr::builder_bdd::{BddPtr, PointerType};
 use crate::repr::var_label::VarLabel;
+use crate::builder::repr::builder_bdd::TableIndex;
 
 mod test_graphviz {
     use super::*;
@@ -40,37 +41,47 @@ mod test_graphviz {
         }
     }
 
-    use crate::builder::repr::builder_bdd::TableIndex;
 
-    #[derive(Clone)]
-    /// The primary storage unit for binary decision diagram nodes
-    /// Each variable is associated with an individual subtable
-    pub struct BddTable {
-        subtables: Vec<Vec<BddNode>>,
+    pub struct MyBddManager {
+        compute_table: Vec<Vec<BddNode>>,
+        order: Vec<VarLabel>,
     }
-
-    impl BddTable {
-        pub fn new(num_vars: usize) -> BddTable {
-            let mut v = Vec::with_capacity(num_vars);
-            for _ in 0..num_vars {
-                v.push(vec![]);
+    impl MyBddManager {
+        pub fn new(order: Vec<VarLabel>) -> MyBddManager {
+            let mut compute_table = Vec::with_capacity(order.len());
+            for _ in 0..order.len() {
+                compute_table.push(vec![]);
             }
+            MyBddManager {compute_table, order,}
+        }
+        pub fn var(&mut self, lbl: VarLabel) -> BddPtr {
+            let bdd = BddNode::new(BddPtr::false_node(), BddPtr::true_node(), lbl);
+            let r = self.get_or_insert(bdd);
+            r
+        }
+        pub fn deref(&self, ptr: BddPtr) -> Bdd {
+            match ptr.ptr_type() {
+                PointerType::PtrFalse => Bdd::BddFalse,
+                PointerType::PtrTrue => Bdd::BddTrue,
+                PointerType::PtrNode => {
+                    let bddnode = &self.compute_table[ptr.var() as usize][0];
+                    Bdd::new_node(bddnode.low, bddnode.high, VarLabel::new(ptr.var()))
 
-            BddTable {
-                subtables: v,
+                }
             }
         }
-        pub fn get_or_insert(&mut self, bdd: Bdd) -> BddPtr {
+        pub fn get_or_insert(&mut self, bdd: BddNode) -> BddPtr {
+           let bdd = Bdd::new_node(bdd.low, bdd.high, bdd.var);
             match bdd {
                 Bdd::BddFalse => BddPtr::false_node(),
                 Bdd::BddTrue => BddPtr::true_node(),
                 Bdd::Node(n) => {
                     let var = n.var.value();
                     let elem = BddNode::new(n.low, n.high, VarLabel::new(var.clone()));
-                    let vartable = &self.subtables[var as usize];
+                    let vartable = &self.compute_table[var as usize];
                     match vartable.iter().filter(|e| *e == &elem).next() {
                         None => {
-                            self.subtables[var as usize].push(elem.clone());
+                            self.compute_table[var as usize].push(elem.clone());
                         }
                         Some(ptr) => {
                         },
@@ -80,53 +91,16 @@ mod test_graphviz {
                 }
             }
         }
-
-        pub fn deref(&self, ptr: BddPtr) -> Bdd {
-            match ptr.ptr_type() {
-                PointerType::PtrFalse => Bdd::BddFalse,
-                PointerType::PtrTrue => Bdd::BddTrue,
-                PointerType::PtrNode => {
-                    let bddnode = &self.subtables[ptr.var() as usize][0];
-                    Bdd::new_node(bddnode.low, bddnode.high, VarLabel::new(ptr.var()))
-
-                }
-            }
-        }
-
-    }
-
-    pub struct MyBddManager {
-        compute_table: BddTable,
-        order: Vec<VarLabel>,
-    }
-    impl MyBddManager {
-        pub fn new(order: Vec<VarLabel>) -> MyBddManager {
-            MyBddManager {
-                compute_table: BddTable::new(order.len()),
-                order,
-            }
-        }
-        pub fn var(&mut self, lbl: VarLabel) -> BddPtr {
-            let bdd = BddNode::new(BddPtr::false_node(), BddPtr::true_node(), lbl);
-            let r = self.get_or_insert(bdd);
-            r
-
-        }
         pub fn low(&self, ptr: BddPtr) -> BddPtr {
             assert!(!ptr.is_const(), "Attempting to get low pointer of constant BDD");
-            let b = self.compute_table.deref(ptr).into_node();
+            let b = self.deref(ptr).into_node();
             b.low
         }
         pub fn high(&self, ptr: BddPtr) -> BddPtr {
             assert!(!ptr.is_const(), "Attempting to get high pointer of constant BDD");
-            let b = self.compute_table.deref(ptr).into_node();
+            let b = self.deref(ptr).into_node();
             b.high
         }
-        fn get_or_insert(&mut self, bdd: BddNode) -> BddPtr {
-           let bdd = Bdd::new_node(bdd.low, bdd.high, bdd.var);
-           self.compute_table.get_or_insert(bdd)
-        }
-
         pub fn and(&mut self, f: BddPtr, g: BddPtr) -> BddPtr {
             println!("and!");
             let reg_f = f.regular();
