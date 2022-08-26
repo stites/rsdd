@@ -335,7 +335,6 @@ mod test_graphviz {
             }
         }
     }
-
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum Bdd {
         Node(BddNode),
@@ -345,12 +344,7 @@ mod test_graphviz {
 
     impl Bdd {
         pub fn new_node(low: BddPtr, high: BddPtr, var: VarLabel) -> Bdd {
-            let new_n = BddNode {
-                low: low,
-                high: high,
-                var: var,
-            };
-            Bdd::Node(new_n)
+            Bdd::Node(BddNode {low: low, high: high, var: var,})
         }
 
         pub fn into_node(&self) -> BddNode {
@@ -361,39 +355,13 @@ mod test_graphviz {
         }
     }
 
-
-    /// The primary BDD storage object
-    /// Called 'Topless' because it does not keep keep track of the top variable (as
-    /// this is implicit in the storage table)
-    #[derive(Debug, Clone, Copy, Eq)]
-    pub struct ToplessBdd {
-        pub low: BddPtr,
-        pub high: BddPtr,
-    }
-
-    impl PartialEq for ToplessBdd {
-        fn eq(&self, other: &ToplessBdd) -> bool {
-            // Ignore the scratch space when checking equality
-            self.low == other.low && self.high == other.high
-        }
-    }
-
-    impl ToplessBdd {
-        pub fn new(low: BddPtr, high: BddPtr) -> ToplessBdd {
-            ToplessBdd {
-                low: low,
-                high: high,
-            }
-        }
-    }
-
     use crate::builder::repr::builder_bdd::TableIndex;
 
     #[derive(Clone)]
     /// The primary storage unit for binary decision diagram nodes
     /// Each variable is associated with an individual subtable
     pub struct BddTable {
-        subtables: Vec<Vec<ToplessBdd>>,
+        subtables: Vec<Vec<BddNode>>,
     }
 
     impl BddTable {
@@ -413,14 +381,14 @@ mod test_graphviz {
                 Bdd::BddTrue => BddPtr::true_node(),
                 Bdd::Node(n) => {
                     let var = n.var.value();
-                    let elem = ToplessBdd::new(n.low, n.high);
+                    let elem = BddNode::new(n.low, n.high, VarLabel::new(var.clone()));
                     let vartable = &self.subtables[var as usize];
-                    let tptr = match vartable.iter().filter(|e| **e == elem).next() {
+                    match vartable.iter().filter(|e| *e == &elem).next() {
                         None => {
-                            self.subtables[var as usize].push(elem);
-                            elem
+                            self.subtables[var as usize].push(elem.clone());
                         }
-                        Some(ptr) => *ptr,
+                        Some(ptr) => {
+                        },
                     };
 
                     BddPtr::new(VarLabel::new(var), TableIndex::new(0 as u64))
@@ -433,9 +401,9 @@ mod test_graphviz {
                 PointerType::PtrFalse => Bdd::BddFalse,
                 PointerType::PtrTrue => Bdd::BddTrue,
                 PointerType::PtrNode => {
-                    let topless =
-                        self.subtables[ptr.var() as usize][0];
-                    Bdd::new_node(topless.low, topless.high, VarLabel::new(ptr.var()))
+                    let bddnode = &self.subtables[ptr.var() as usize][0];
+                    Bdd::new_node(bddnode.low, bddnode.high, VarLabel::new(ptr.var()))
+
                 }
             }
         }
