@@ -319,15 +319,135 @@ mod test_graphviz {
         }";
     }
 
+    use crate::repr::var_label::VAR_BITS;
+    use std::fmt;
+    use std::mem;
+
+    /// A BDD pointer
+    #[derive(Clone, PartialEq, Eq, Hash, Copy, PartialOrd)]
+    pub struct MyBddPtr {
+        data: u64,
+    }
+
+    impl fmt::Debug for MyBddPtr {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match self.ptr_type() {
+                MPtrType::PtrFalse => write!(f, "BddPtr(F)"),
+                MPtrType::PtrTrue => write!(f, "BddPtr(T)"),
+                MPtrType::PtrNode => {
+                    write!(
+                        f,
+                        "BddPtr(Cur var: {}, Is complemented: {}, Index: {})",
+                        self.var(),
+                        self.is_compl(),
+                        self.idx()
+                    )
+                }
+            }
+        }
+    }
+
+    #[derive(Hash, Debug, Clone, Copy, Eq, PartialEq)]
+    pub enum MPtrType {
+        PtrFalse,
+        PtrTrue,
+        PtrNode,
+    }
+
+    use crate::BITFIELD;
+    /// number of bits allocated for a table index (limit on total BDDs of each
+    /// variable)
+    const INDEX_BITS: usize = 64 - VAR_BITS - 1; // reserve 1 bit for special
+    const MAX_INDEX_SIZE: usize = 1 << INDEX_BITS;
+
+    const TRUE_VALUE: u64 = 1; // the variable ID corresponding with a true value
+
+
+    BITFIELD!(MyBddPtr data : u64 [
+        var set_var[0..VAR_BITS],                  // the variable index
+        special set_special[VAR_BITS..VAR_BITS+1], // a special bit of 1 indicates a special BDD node (like true or false)
+        compl set_compl[VAR_BITS+1..VAR_BITS+2],
+        idx set_idx[(VAR_BITS+2)..64],
+    ]);
+
+    impl MyBddPtr {
+        /// Generate a new BddPtr for a particular table at index idx
+        #[inline]
+        pub fn new(var: VarLabel, idx: TableIndex) -> MyBddPtr {
+            let mut v = MyBddPtr { data: 0 };
+            v.set_idx(idx.value());
+            v.set_var(var.value());
+            v
+        }
+        pub fn is_true(&self) -> bool {
+            self.special() == 1 && self.var() == TRUE_VALUE && !self.is_compl()
+        }
+        pub fn is_false(&self) -> bool {
+            self.special() == 1 && self.var() == TRUE_VALUE && self.is_compl()
+        }
+        pub fn is_const(&self) -> bool {
+            self.special() == 1
+        }
+        pub fn ptr_type(&self) -> MPtrType {
+            if self.is_const() {
+                if self.is_true() {
+                    MPtrType::PtrTrue
+                } else {
+                    MPtrType::PtrFalse
+                }
+            } else {
+                MPtrType::PtrNode
+            }
+        }
+        pub fn true_node() -> MyBddPtr {
+            let mut v = MyBddPtr { data: 0 };
+            v.set_special(1);
+            v.set_var(TRUE_VALUE);
+            v
+        }
+        pub fn false_node() -> MyBddPtr {
+            let v = MyBddPtr::true_node();
+            v.neg()
+        }
+
+        pub fn is_compl(&self) -> bool {
+            self.compl() == 1
+        }
+
+        /// Gets a non-complemented version of self
+        pub fn regular(&self) -> MyBddPtr {
+            let mut new = self.clone();
+            new.set_compl(0);
+            new
+        }
+        /// Get the variable label of this MyBddPtr
+        pub fn label(&self) -> VarLabel {
+            VarLabel::new(self.var() as u64)
+        }
+
+        /// Negate the BDD pointer
+        pub fn neg(&self) -> MyBddPtr {
+            let mut r = self.clone();
+            if self.is_compl() {
+                r.set_compl(0);
+            } else {
+                r.set_compl(1);
+            }
+            r
+        }
+
+
+    }
+
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct BddNode {
-        pub low: BddPtr,
-        pub high: BddPtr,
+        pub low: MyBddPtr,
+        pub high: MyBddPtr,
         pub var: VarLabel,
     }
 
     impl BddNode {
-        pub fn new(low: BddPtr, high: BddPtr, var: VarLabel) -> BddNode {
+        pub fn new(low: MyBddPtr, high: MyBddPtr, var: VarLabel) -> BddNode {
             BddNode {
                 low: low,
                 high: high,
@@ -343,7 +463,7 @@ mod test_graphviz {
     }
 
     impl Bdd {
-        pub fn new_node(low: BddPtr, high: BddPtr, var: VarLabel) -> Bdd {
+        pub fn new_node(low: MyBddPtr, high: MyBddPtr, var: VarLabel) -> Bdd {
             Bdd::Node(BddNode {low: low, high: high, var: var,})
         }
 
@@ -375,10 +495,10 @@ mod test_graphviz {
                 subtables: v,
             }
         }
-        pub fn get_or_insert(&mut self, bdd: Bdd) -> BddPtr {
+        pub fn get_or_insert(&mut self, bdd: Bdd) -> MyBddPtr {
             match bdd {
-                Bdd::BddFalse => BddPtr::false_node(),
-                Bdd::BddTrue => BddPtr::true_node(),
+                Bdd::BddFalse => MyBddPtr::false_node(),
+                Bdd::BddTrue => MyBddPtr::true_node(),
                 Bdd::Node(n) => {
                     let var = n.var.value();
                     let elem = BddNode::new(n.low, n.high, VarLabel::new(var.clone()));
@@ -391,16 +511,16 @@ mod test_graphviz {
                         },
                     };
 
-                    BddPtr::new(VarLabel::new(var), TableIndex::new(0 as u64))
+                    MyBddPtr::new(VarLabel::new(var), TableIndex::new(0 as u64))
                 }
             }
         }
 
-        pub fn deref(&self, ptr: BddPtr) -> Bdd {
+        pub fn deref(&self, ptr: MyBddPtr) -> Bdd {
             match ptr.ptr_type() {
-                PointerType::PtrFalse => Bdd::BddFalse,
-                PointerType::PtrTrue => Bdd::BddTrue,
-                PointerType::PtrNode => {
+                MPtrType::PtrFalse => Bdd::BddFalse,
+                MPtrType::PtrTrue => Bdd::BddTrue,
+                MPtrType::PtrNode => {
                     let bddnode = &self.subtables[ptr.var() as usize][0];
                     Bdd::new_node(bddnode.low, bddnode.high, VarLabel::new(ptr.var()))
 
@@ -421,28 +541,28 @@ mod test_graphviz {
                 order,
             }
         }
-        pub fn var(&mut self, lbl: VarLabel) -> BddPtr {
-            let bdd = BddNode::new(BddPtr::false_node(), BddPtr::true_node(), lbl);
+        pub fn var(&mut self, lbl: VarLabel) -> MyBddPtr {
+            let bdd = BddNode::new(MyBddPtr::false_node(), MyBddPtr::true_node(), lbl);
             let r = self.get_or_insert(bdd);
             r
 
         }
-        pub fn low(&self, ptr: BddPtr) -> BddPtr {
+        pub fn low(&self, ptr: MyBddPtr) -> MyBddPtr {
             assert!(!ptr.is_const(), "Attempting to get low pointer of constant BDD");
             let b = self.compute_table.deref(ptr).into_node();
             b.low
         }
-        pub fn high(&self, ptr: BddPtr) -> BddPtr {
+        pub fn high(&self, ptr: MyBddPtr) -> MyBddPtr {
             assert!(!ptr.is_const(), "Attempting to get high pointer of constant BDD");
             let b = self.compute_table.deref(ptr).into_node();
             b.high
         }
-        fn get_or_insert(&mut self, bdd: BddNode) -> BddPtr {
+        fn get_or_insert(&mut self, bdd: BddNode) -> MyBddPtr {
            let bdd = Bdd::new_node(bdd.low, bdd.high, bdd.var);
            self.compute_table.get_or_insert(bdd)
         }
 
-        pub fn and(&mut self, f: BddPtr, g: BddPtr) -> BddPtr {
+        pub fn and(&mut self, f: MyBddPtr, g: MyBddPtr) -> MyBddPtr {
             println!("and!");
             let reg_f = f.regular();
             let reg_g = g.regular();
@@ -475,30 +595,29 @@ mod test_graphviz {
         }
     }
 
-    fn my_get_label(mgr: &MyBddManager, ptr: BddPtr) -> (String, PointerType) {
+    fn my_get_label(mgr: &MyBddManager, ptr: MyBddPtr) -> (String, MPtrType) {
         let x = ptr.ptr_type().clone();
         match x {
-           PtrTrue  => ("PtrTrue".to_string(), x),
-           PtrFalse => ("PtrFalse".to_string(), x),
-           PtrNode  => ("PtrNode".to_string(), x),
+           MPtrType::PtrTrue  => ("PtrTrue".to_string(), x),
+           MPtrType::PtrFalse => ("PtrFalse".to_string(), x),
+           MPtrType::PtrNode  => ("PtrNode".to_string(), x),
        }
     }
-    type MyReturn = Vec<((BddPtr, (String, PointerType)), (BddPtr, (String, PointerType)))>;
-    pub fn call_recursive_bfs(mgr: &MyBddManager, ptr: BddPtr) -> MyReturn {
-        use crate::builder::repr::builder_bdd::PointerType::*;
+    type MyReturn = Vec<((MyBddPtr, (String, MPtrType)), (MyBddPtr, (String, MPtrType)))>;
+    pub fn call_recursive_bfs(mgr: &MyBddManager, ptr: MyBddPtr) -> MyReturn {
         fn bfs_recursively(
             mgr: &MyBddManager,
-            optr: Option<BddPtr>,
-            queue: &mut Vec<BddPtr>,
+            optr: Option<MyBddPtr>,
+            queue: &mut Vec<MyBddPtr>,
             edges: &mut MyReturn,
         ) -> MyReturn {
             match optr {
                 None => edges.to_vec(),
                 Some(ptr) => {
                     match ptr.ptr_type() {
-                        PtrTrue  => bfs_recursively(mgr, queue.pop(), queue, edges),
-                        PtrFalse => bfs_recursively(mgr, queue.pop(), queue, edges),
-                        PtrNode => {
+                        MPtrType::PtrTrue  => bfs_recursively(mgr, queue.pop(), queue, edges),
+                        MPtrType::PtrFalse => bfs_recursively(mgr, queue.pop(), queue, edges),
+                        MPtrType::PtrNode => {
                             let lp = mgr.low(ptr);
                             let hp = mgr.high(ptr);
                             let parent = (ptr, my_get_label(mgr, ptr));
