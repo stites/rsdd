@@ -61,14 +61,68 @@ pub enum PointerType {
     PtrNode,
 }
 
-BITFIELD!(BddPtr data : u64 [
-    var set_var[0..VAR_BITS],                  // the variable index
-    special set_special[VAR_BITS..VAR_BITS+1], // a special bit of 1 indicates a special BDD node (like true or false)
-    compl set_compl[VAR_BITS+1..VAR_BITS+2],
-    idx set_idx[(VAR_BITS+2)..64],
-]);
-
+// /// FIXME: meta in the preface might be easier to reason about
+// BITFIELD!(BddPtr data : u64 [
+//     var set_var[0..VAR_BITS],                  // the variable index
+//     special set_special[VAR_BITS..VAR_BITS+1], // a special bit of 1 indicates a special BDD node (like true or false)
+//     compl set_compl[VAR_BITS+1..VAR_BITS+2],
+//     idx set_idx[(VAR_BITS+2)..64],
+// ]);
+struct Ix {start : usize, end : usize,}
+impl Ix {fn new(start :usize, end :usize) -> Ix {Ix { start, end }}}
 impl BddPtr {
+    #[inline]
+    pub fn var(&self) -> u64 {
+        let r = Ix::new(0,VAR_BITS);
+        let size = mem::size_of::<u64>() * 8;
+        self.data << (size - r.end) >> (size - r.end + r.start)
+    }
+    #[inline]
+    pub fn set_var(&mut self, val: u64) {
+        let r = Ix::new(0,VAR_BITS);
+        let mask = ((1 << (r.end - r.start)) - 1) << r.start;
+        self.data &= !mask;
+        self.data |= (val << r.start) & mask;
+    }
+    #[inline]
+    pub fn special(&self) -> u64 {
+        let r = Ix::new(VAR_BITS,VAR_BITS+1);
+        let size = mem::size_of::<u64>() * 8;
+        self.data << (size - r.end) >> (size - r.end + r.start)
+    }
+    #[inline]
+    pub fn set_special(&mut self, val: u64) {
+        let r = Ix::new(VAR_BITS,VAR_BITS+1);
+        let mask = ((1 << (r.end - r.start)) - 1) << r.start;
+        self.data &= !mask;
+        self.data |= (val << r.start) & mask;
+    }
+    #[inline]
+    pub fn compl(&self) -> u64 {
+        let r = Ix::new(VAR_BITS+1,VAR_BITS+2);
+        let size = mem::size_of::<u64>() * 8;
+        self.data << (size - r.end) >> (size - r.end + r.start)
+    }
+    #[inline]
+    pub fn set_compl(&mut self, val: u64) {
+        let r = Ix::new(VAR_BITS+1,VAR_BITS+2);
+        let mask = ((1 << (r.end - r.start)) - 1) << r.start;
+        self.data &= !mask;
+        self.data |= (val << r.start) & mask;
+    }
+    #[inline]
+    pub fn idx(&self) -> u64 {
+        let r = Ix::new(VAR_BITS+2,64);
+        let size = mem::size_of::<u64>() * 8;
+        self.data << (size - r.end) >> (size - r.end + r.start)
+    }
+    #[inline]
+    pub fn set_idx(&mut self, val: u64) {
+        let r = Ix::new(VAR_BITS+2,64);
+        let mask = ((1 << (r.end - r.start)) - 1) << r.start;
+        self.data &= !mask;
+        self.data |= (val << r.start) & mask;
+    }
     /// Generate a new BddPtr for a particular table at index idx
     #[inline]
     pub fn new(var: VarLabel, idx: TableIndex) -> BddPtr {
