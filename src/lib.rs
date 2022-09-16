@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 //! Defines exports and the C api
 extern crate dimacs;
 extern crate fnv;

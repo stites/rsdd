@@ -1,3 +1,7 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
 extern crate rsdd;
 extern crate rsgm;
 
