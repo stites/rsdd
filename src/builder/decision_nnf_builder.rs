@@ -289,7 +289,7 @@ impl DecisionNNFBuilder {
             for i in 100..num_samples {
                 sat.decide(Literal::new(VarLabel::new_usize(i), rng.gen_bool(0.5)));
             }
-            let mut r = self.topdown_h(cnf, &mut sat, 0, order, &mut hasher, cache);
+            let r = self.topdown_h(cnf, &mut sat, 0, order, &mut hasher, cache);
             res.push((r, 0.5));
         }
         res

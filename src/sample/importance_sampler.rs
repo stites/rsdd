@@ -36,16 +36,16 @@ pub trait ImportanceSampler<Sample: std::fmt::Debug + Clone, State: std::fmt::De
     /// This is used for testing -- its runtime is `O(# states)`
     fn is_valid(&mut self) -> bool {
         todo!();
-        let proposals = self.propose(false);
-        let mut is_prob = vec![0; self.num_states()];
-        for (proposal, outer_prob) in proposals.vec().iter() {
-            let collapsed = self.collapse(proposal);
-            let unnormalized = self.unnormalized_prob(proposal);
-            for (state, inner_prob) in collapsed.vec().iter() {
+        // let proposals = self.propose(false);
+        // let mut is_prob = vec![0; self.num_states()];
+        // for (proposal, outer_prob) in proposals.vec().iter() {
+        //     let collapsed = self.collapse(proposal);
+        //     let unnormalized = self.unnormalized_prob(proposal);
+        //     for (state, inner_prob) in collapsed.vec().iter() {
 
-            }
-        }
-        false
+        //     }
+        // }
+        // false
     }
 
     /// Collapse a sample into a distribution on states

@@ -4,8 +4,8 @@
 
 use super::{var_label::{Literal, VarLabel}, model::PartialModel, cnf::Cnf};
 
-type clause_idx = usize;
-type lit_idx = usize;
+type ClauseIdx = usize;
+type LitIdx = usize;
 
 
 
@@ -49,9 +49,9 @@ type lit_idx = usize;
 pub struct UnitPropagate<'a> {
     // watch_list_pos[i] is a list of the clauses that are watching the positive
     // literal of varlabel i
-    watch_list_pos: Vec<Vec<clause_idx>>,
+    watch_list_pos: Vec<Vec<ClauseIdx>>,
     // similar to the above, but for negative label
-    watch_list_neg: Vec<Vec<clause_idx>>,
+    watch_list_neg: Vec<Vec<ClauseIdx>>,
     // stack of assignment states (all implied and decided literals)
     state: Vec<PartialModel>,
     cnf: &'a Cnf,
@@ -234,10 +234,10 @@ impl<'a> UnitPropagate<'a> {
             } else {
                 // num_remaining > 1, find a new literal to watch
                 // first, find a new literal to watch
-                let candidate_unwatched : lit_idx = remaining_lits.clone().nth(0).unwrap().get_label().value_usize();
+                let candidate_unwatched : LitIdx = remaining_lits.clone().nth(0).unwrap().get_label().value_usize();
                 // check if candidate_unwatched is already being watched; if it
                 // is, pick another literal to watch
-                let prev_watcher : clause_idx = if new_assignment.get_polarity() {
+                let prev_watcher : ClauseIdx = if new_assignment.get_polarity() {
                     self.watch_list_neg[var_idx][watcher_idx]
                 } else {
                     self.watch_list_pos[var_idx][watcher_idx]
