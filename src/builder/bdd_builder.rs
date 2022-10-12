@@ -1065,7 +1065,7 @@ impl BddManager {
     /// let mut mgr = BddManager::new_default_order(cnf.num_vars());
     /// let w : HashMap<VarLabel, (f64, f64)> = (0..5).map(|x| (VarLabel::new(x), (0.3, 0.7))).collect();
     /// let wmc = BddWmc::new_with_default(0.0, 1.0, w);
-    /// let evidence = mgr.true_ptr();
+    /// let evidence = None;
     /// let bdd = mgr.from_cnf(&cnf);
     /// let (p, marg_map) = mgr.marginal_map(bdd, evidence, &vec![VarLabel::new(0), VarLabel::new(1)], &wmc);
     /// let expected_model = PartialModel::from_litvec(&vec![Literal::new(VarLabel::new(0), true), Literal::new(VarLabel::new(1), true)], cnf.num_vars());
@@ -1075,7 +1075,7 @@ impl BddManager {
     pub fn marginal_map(
         &mut self,
         ptr: BddPtr,
-        evidence: BddPtr,
+        evidence: Option<BddPtr>,
         vars: &[VarLabel],
         wmc: &BddWmc<f64>,
     ) -> (f64, PartialModel) {
@@ -1084,7 +1084,7 @@ impl BddManager {
             marg_vars.insert(v.value_usize());
         }
 
-        let ptr = self.and(ptr, evidence);
+        let ptr = evidence.map_or(ptr, |ev| self.and(ptr, ev));
         let all_true: Vec<Literal> = vars.iter().map(|x| Literal::new(*x, true)).collect();
         let cur_assgn = PartialModel::from_litvec(&all_true, self.num_vars());
         let lower_bound = self.marginal_map_eval(ptr, &cur_assgn, &BitSet::new(), wmc);
