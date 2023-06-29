@@ -15,7 +15,7 @@ pub trait Semiring: Debug + Clone + Copy + ops::Add + ops::Mul {
 }
 
 /// Simple real-number semiring abstraction (all operations standard for reals, abstracted as f64)
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RealSemiring(pub f64);
 
 impl Display for RealSemiring {
