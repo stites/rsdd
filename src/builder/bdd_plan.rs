@@ -16,13 +16,23 @@ pub enum BddPlan {
 }
 
 impl BddPlan {
+    pub fn from_bool(b: bool) -> Self {
+        if b {
+            Self::ConstTrue
+        } else {
+            Self::ConstFalse
+        }
+    }
+
     #[allow(clippy::should_implement_trait)] // TODO: this should probably be renamed not compl?
     pub fn not(p: BddPlan) -> Self {
         Self::Not(Box::new(p))
     }
+
     pub fn neg(p: BddPlan) -> Self {
         Self::Not(Box::new(p))
     }
+
     pub fn and(p1: BddPlan, p2: BddPlan) -> Self {
         Self::And(Box::new(p1), Box::new(p2))
     }
