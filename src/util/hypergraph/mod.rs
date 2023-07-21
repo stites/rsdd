@@ -4,7 +4,6 @@ use core::fmt::Debug;
 use indexmap::set::IndexSet;
 use itertools::Itertools;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fmt;
 use std::hash::{Hash, Hasher};

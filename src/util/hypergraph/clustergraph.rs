@@ -3,7 +3,7 @@ use super::*;
 use core::fmt::Debug;
 use indexmap::set::IndexSet;
 use itertools::{max, Itertools};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 

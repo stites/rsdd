@@ -2,7 +2,6 @@ use crate::util::hypergraph::{Edge, Hypergraph};
 use core::fmt::Debug;
 use indexmap::set::IndexSet;
 use itertools::Itertools;
-use std::collections::HashSet;
 use std::hash::Hash;
 
 #[derive(Clone, Debug)]
