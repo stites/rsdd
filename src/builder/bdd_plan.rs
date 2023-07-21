@@ -3,7 +3,7 @@
 
 use crate::repr::{dtree::DTree, var_label::VarLabel};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BddPlan {
     And(Box<BddPlan>, Box<BddPlan>),
     Or(Box<BddPlan>, Box<BddPlan>),
