@@ -28,7 +28,7 @@ dot = "0.1.4"
 tinyvec = { version = "1.6.0", features = ["alloc"] }
 bumpalo = "3.11.1"
 petgraph = "0.6.2"
-rsgm = { git = "https://github.com/pmall-neu/rsgm" }
+rsgm = { git = "https://github.com/neuppl/rsgm" }
 rand_chacha = "0.3.1"
 itertools = { version = "0.10.5", optional = true }
 indexmap = { version = "1.9.3", optional = true }
