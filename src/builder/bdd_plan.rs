@@ -24,6 +24,23 @@ impl BddPlan {
         }
     }
 
+    pub fn _neg(&self) -> Self {
+        Self::Not(Box::new(self.clone()))
+    }
+    pub fn _and(&self, p2: &BddPlan) -> Self {
+        Self::And(Box::new(self.clone()), Box::new(p2.clone()))
+    }
+    pub fn _or(&self, p2: &BddPlan) -> Self {
+        Self::Or(Box::new(self.clone()), Box::new(p2.clone()))
+    }
+    pub fn _iff(&self, p2: &BddPlan) -> Self {
+        Self::Iff(Box::new(self.clone()), Box::new(p2.clone()))
+    }
+    pub fn _ite(&self, pt: &BddPlan, pf: &BddPlan) -> Self {
+        Self::Ite(Box::new(self.clone()), Box::new(pt.clone()), Box::new(pf.clone()))
+    }
+
+
     #[allow(clippy::should_implement_trait)] // TODO: this should probably be renamed not compl?
     pub fn not(p: BddPlan) -> Self {
         Self::Not(Box::new(p))
