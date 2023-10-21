@@ -5,11 +5,12 @@
 }:
 rustPlatform.buildRustPackage rec {
   pname = "rsdd";
-  version = "unstable-2023-03-03";
+  version = "0.1.0";
 
   src = ../.;
 
-  cargoHash = "sha256-mi27RanxrNy6ncpFUAvR62gSj+JnvLc1BPZD4NI56yg=";
+  cargoHash = "sha256-GYO554P3VHilJm2z/BM8noiPKG/HQM5jSELwuXAHJAA=";
+
   cargoPatches = [./0001-Cargo.lock.patch];
 
   meta = with lib; {
