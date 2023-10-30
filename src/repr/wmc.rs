@@ -36,6 +36,9 @@ impl<T: Semiring + std::ops::Mul<Output = T> + std::ops::Add<Output = T>> WmcPar
             var_to_val: var_to_val_vec,
         }
     }
+    pub fn num_vars(&self) -> usize {
+        self.var_to_val.len()
+    }
 
     /// Generate a new `BddWmc` with no associations
     pub fn new(zero: T, one: T) -> WmcParams<T> {
