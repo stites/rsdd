@@ -19,6 +19,19 @@ pub struct WmcParams<T: Semiring> {
 }
 
 impl<T: Semiring + std::ops::Mul<Output = T> + std::ops::Add<Output = T>> WmcParams<T> {
+    pub fn new_with_size(
+        zero: T,
+        one: T,
+        size: usize
+    ) -> WmcParams<T> {
+        let var_to_val: Vec<Option<(T, T)>> = vec![None; size];
+        WmcParams {
+            zero,
+            one,
+            var_to_val,
+        }
+    }
+
     /// Generates a new `BddWmc` with a default `var_to_val`; it is private because we
     /// do not want to expose the structure of the associative array
     pub fn new_with_default(
@@ -26,15 +39,12 @@ impl<T: Semiring + std::ops::Mul<Output = T> + std::ops::Add<Output = T>> WmcPar
         one: T,
         var_to_val: HashMap<VarLabel, (T, T)>,
     ) -> WmcParams<T> {
-        let mut var_to_val_vec: Vec<Option<(T, T)>> = vec![None; var_to_val.len()];
+        let mut wmc = Self::new_with_size(zero, one, var_to_val.len());
+        // let mut var_to_val_vec: Vec<Option<(T, T)>> = vec![None; var_to_val.len()];
         for (key, value) in var_to_val.iter() {
-            var_to_val_vec[key.value_usize()] = Some(*value);
+            wmc.var_to_val[key.value_usize()] = Some(*value);
         }
-        WmcParams {
-            zero,
-            one,
-            var_to_val: var_to_val_vec,
-        }
+        wmc
     }
     pub fn num_vars(&self) -> usize {
         self.var_to_val.len()
