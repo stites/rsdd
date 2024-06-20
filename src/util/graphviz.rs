@@ -137,9 +137,9 @@ mod test_graphviz {
     fn my_get_label(mgr: &MyBddManager, ptr: BddPtr) -> (String, PointerType) {
         let x = ptr.ptr_type().clone();
         match x {
-           PtrTrue  => ("PtrTrue".to_string(), x),
-           PtrFalse => ("PtrFalse".to_string(), x),
-           PtrNode  => ("PtrNode".to_string(), x),
+           PointerType::PtrTrue  => ("PtrTrue".to_string(), x),
+           PointerType::PtrFalse => ("PtrFalse".to_string(), x),
+           PointerType::PtrNode  => ("PtrNode".to_string(), x),
        }
     }
     type MyReturn = Vec<((BddPtr, (String, PointerType)), (BddPtr, (String, PointerType)))>;
