@@ -172,17 +172,13 @@ unsafe extern "C" fn bdd_is_const(bdd: *mut BddPtr) -> bool {
 }
 
 #[no_mangle]
-unsafe extern "C" fn bdd_true(builder: *mut RsddBddBuilder) -> *mut BddPtr {
-    let builder = robdd_builder_from_ptr(builder);
-    let bdd = builder.true_ptr();
-    Box::into_raw(Box::new(bdd))
+unsafe extern "C" fn bdd_true() -> *mut BddPtr {
+    Box::into_raw(Box::new(BddPtr::PtrTrue))
 }
 
 #[no_mangle]
-unsafe extern "C" fn bdd_false(builder: *mut RsddBddBuilder) -> *mut BddPtr {
-    let builder = robdd_builder_from_ptr(builder);
-    let bdd = builder.false_ptr();
-    Box::into_raw(Box::new(bdd))
+unsafe extern "C" fn bdd_false() -> *mut BddPtr {
+    Box::into_raw(Box::new(BddPtr::PtrFalse))
 }
 
 #[no_mangle]
