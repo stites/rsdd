@@ -17,6 +17,6 @@ rustPlatform.buildRustPackage rec {
     description = "Rust decision diagrams";
     homepage = "https://github.com/neuppl/rsdd";
     license = licenses.mit;
-    maintainers = with maintainers; [];
+    maintainers = with maintainers; [ stites ];
   };
 }
