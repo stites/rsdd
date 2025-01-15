@@ -9,9 +9,13 @@ rustPlatform.buildRustPackage rec {
 
   src = ../.;
 
-  cargoPatches = [./0001-Cargo.lock.patch];
-  cargoHash = "sha256-yIGvJRSW1qCf4giVZkj2rW7g0CG69nd5Ystle6cG5nU=";
+  cargoHash = "sha256-Dfiu7FKL5R72SgxmLCGDZnB+Zlo5RL6XGuzfgwokHWs=";
+  cargoLock.lockFile = ./Cargo.lock;
+  postPatch = "ln -s ${./Cargo.lock} Cargo.lock";
+
+  useNextest = true;
   buildFeatures = [ "ffi" ];
+  buildType = "debug";
 
   meta = with lib; {
     description = "Rust decision diagrams";
