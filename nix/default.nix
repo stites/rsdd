@@ -1,7 +1,7 @@
 {
   lib,
   rustPlatform,
-  fetchFromGitHub,
+  buildType ? "debug"
 }:
 rustPlatform.buildRustPackage rec {
   pname = "rsdd";
@@ -15,7 +15,7 @@ rustPlatform.buildRustPackage rec {
 
   useNextest = true;
   buildFeatures = [ "ffi" ];
-  buildType = "debug";
+  inherit buildType;
 
   meta = with lib; {
     description = "Rust decision diagrams";

@@ -14,9 +14,11 @@
         ...
       }: {
         packages = rec {
-          default = rsdd;
-          rsdd = pkgs.callPackage ./. {};
-          rsdd-nocheck = config.packages.rsdd.overrideAttrs (_: {doCheck = false;});
+          default = rsdd-debug;
+          rsdd-debug = pkgs.callPackage ./. { buildType = "debug"; };
+          rsdd-debug-nocheck = config.packages.rsdd-debug.overrideAttrs (_: {doCheck = false;});
+          rsdd-release = pkgs.callPackage ./. { buildType = "release"; };
+          rsdd-release-nocheck = config.packages.rsdd-release.overrideAttrs (_: {doCheck = false;});
           render-graphviz = let
             py = pkgs.python3.withPackages (p: [p.graphviz]);
           in
