@@ -156,6 +156,19 @@ unsafe extern "C" fn bdd_negate(builder: *mut RsddBddBuilder, bdd: *mut BddPtr) 
     Box::into_raw(Box::new(negate))
 }
 
+
+#[no_mangle]
+unsafe extern "C" fn bdd_condition(
+    builder: *mut RsddBddBuilder,
+    f: *mut BddPtr,
+    label: u64,
+    polarity: bool,
+) -> *mut BddPtr {
+    let builder = robdd_builder_from_ptr(builder);
+    let cond = builder.condition(*f, VarLabel::new(label), polarity);
+    Box::into_raw(Box::new(cond))
+}
+
 #[no_mangle]
 unsafe extern "C" fn bdd_is_true(bdd: *mut BddPtr) -> bool {
     (*bdd).is_true()
