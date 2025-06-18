@@ -10,8 +10,8 @@ rustPlatform.buildRustPackage rec {
   src = ../.;
 
   cargoPatches = [./0001-Cargo.lock.patch];
-  cargoHash = "sha256-H/82SUvZ2h9FPZOJiNpQa1VTiXmOrRI8K+6srhIcQPA=";
-  buildFeatures = [ "ffi" ];
+  cargoHash = "sha256-sMMxm+++gYEE+ODyYNaJo5Yz8vJysvFEjyoSJlnwCm4=";
+  buildFeatures = [ "ffi" "extras" ];
   # buildType = "debug";  # note that there is a bug in release mode for the ffi
 
   meta = with lib; {
