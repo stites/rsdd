@@ -29,3 +29,6 @@ pub mod wasm;
 // when using rsdd-ocaml
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(feature = "extras")]
+pub mod extras;

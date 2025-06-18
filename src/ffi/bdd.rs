@@ -5,6 +5,11 @@ use crate::{
     serialize::BDDSerializer,
     util::semirings::{Complex, FiniteField, RealSemiring, Semiring},
 };
+#[cfg(feature = "extras")]
+use crate::extras::all_models_flat;
+#[cfg(feature = "extras")]
+use std::mem;
+
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char};
 
 pub(super) type BddPtr = repr::BddPtr<'static>;
@@ -278,4 +283,51 @@ unsafe extern "C" fn bdd_wmc(bdd: *mut BddPtr, wmc: *mut WmcParams<RealSemiring>
 #[no_mangle]
 unsafe extern "C" fn bdd_wmc_complex(bdd: *mut BddPtr, wmc: *mut WmcParams<Complex>) -> Complex {
     DDNNFPtr::unsmoothed_wmc(&(*bdd), &(*wmc))
+}
+
+
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, PartialOrd, Ord)]
+#[cfg(feature = "extras")]
+pub struct Models {
+    nvars : usize,
+    count : usize,
+    models : *mut bool,
+}
+
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn models_nvars(ms: *mut Models) -> usize {
+    (*ms).nvars
+}
+
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn models_count(ms: *mut Models) -> usize {
+    (*ms).count
+}
+
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn models_flatlist(ms: *mut Models) -> *mut bool {
+    (*ms).models
+}
+
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn bdd_all_models(
+    builder: *mut RsddBddBuilder,
+    rbdd: *mut BddPtr,
+) -> *mut Models {
+    let builder = robdd_builder_from_ptr(builder);
+    let nvars = builder.order().num_vars();
+
+    let bdd = *rbdd;
+
+    let mut vec = all_models_flat(builder, bdd);
+    let count = vec.len();
+    let ptr = vec.as_mut_ptr();
+    mem::forget(vec);
+    let ms = Models { nvars, count, models: ptr };
+    Box::into_raw(Box::new(ms))
 }
