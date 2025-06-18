@@ -6,7 +6,7 @@ use crate::{
     util::semirings::{Complex, FiniteField, RealSemiring, Semiring},
 };
 #[cfg(feature = "extras")]
-use crate::extras::all_models_flat;
+use crate::extras::{all_models_flat,variables_sorted};
 #[cfg(feature = "extras")]
 use std::mem;
 
@@ -286,6 +286,16 @@ unsafe extern "C" fn bdd_wmc_complex(bdd: *mut BddPtr, wmc: *mut WmcParams<Compl
 }
 
 
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn bdd_variables_sorted(rbdd: *mut BddPtr) -> *mut u64 {
+  let bdd = *rbdd;
+  let mut vec : Vec<_> = variables_sorted(&bdd).into_iter().map(|x| x.value()).collect();
+  let ptr = vec.as_mut_ptr();
+  mem::forget(vec);
+  ptr
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Copy, PartialOrd, Ord)]
 #[cfg(feature = "extras")]
@@ -331,3 +341,4 @@ unsafe extern "C" fn bdd_all_models(
     let ms = Models { nvars, count, models: ptr };
     Box::into_raw(Box::new(ms))
 }
+

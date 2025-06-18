@@ -1,15 +1,45 @@
-use crate::repr::{BddPtr, DDNNFPtr};
+use crate::repr::{BddPtr, DDNNFPtr, VarLabel, Fold};
 use crate::builder::bdd::RobddBuilder;
 use crate::builder::*;
 use crate::builder::cache::IteTable;
+use std::collections::HashSet;
 use itertools::Itertools;
+
+pub fn variables<'a>(bdd: &BddPtr<'a>) -> HashSet<VarLabel> {
+    Fold::new(
+        &mut |vs: HashSet<Option<VarLabel>>, bdd| {
+            let mut vs = vs;
+            vs.insert(bdd.node.var_safe());
+            vs
+        },
+        HashSet::new(),
+        &|ret, lo_hi| match lo_hi {
+            None => ret,
+            Some((lo, hi)) => {
+                let mut v = ret;
+                v.extend(lo);
+                v.extend(hi);
+                v
+            }
+        },
+    )
+    .mut_fold(bdd)
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+pub fn variables_sorted<'a>(bdd: &BddPtr<'a>) -> Vec<VarLabel> {
+  variables(&bdd).into_iter().sorted().collect_vec()
+}
 
 pub fn all_models<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>) -> Vec<Vec<bool>>{
     let polarity = [false, true];
-    let nvars = builder.order().num_vars();
+    let vars = variables_sorted(&bdd);
+    let nvars = vars.len();
     let combinations : Vec<Vec<_>> = (0..nvars).map(|_| polarity)
         .multi_cartesian_product()
-        .filter(|xs| eval_assignment(builder, bdd, &xs).expect("assignments are total"))
+        .filter(|xs| eval_assignment(builder, bdd, &vars, &xs).expect("assignments are total"))
         .collect();
     combinations
 }
@@ -20,11 +50,10 @@ pub fn all_models_flat<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a 
 
 
 
-pub fn eval_assignment<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>, xs:&[bool]) -> Option<bool> {
-    let vo = builder.order();
+pub fn eval_assignment<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>, varlabels: &[VarLabel], xs:&[bool]) -> Option<bool> {
     let mut ev = bdd;
     for (ix, pol) in xs.iter().enumerate() {
-        ev = builder.condition(ev, vo.var_at_level(ix), *pol)
+        ev = builder.condition(ev, varlabels[ix], *pol)
     }
     if ev.is_const() {
         Some(ev.is_true())
@@ -99,9 +128,12 @@ mod test {
             for xs in &assignments {
                 println!("{:?}", xs);
             }
+            let vars = variables_sorted(&bdd);
+            println!("vars: {:?}", vars);
+
             let all_valid = assignments
                 .into_iter()
-                .all(|xs| eval_assignment(&builder, bdd, &xs).expect("assignments are total"));
+                .all(|xs| eval_assignment(&builder, bdd, &vars, &xs).expect("assignments are total"));
             TestResult::from_bool(all_valid)
         }
   }
