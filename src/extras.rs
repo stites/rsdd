@@ -33,19 +33,19 @@ pub fn variables_sorted<'a>(bdd: &BddPtr<'a>) -> Vec<VarLabel> {
   variables(&bdd).into_iter().sorted().collect_vec()
 }
 
-pub fn _all_models<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, vars: &[VarLabel], bdd: BddPtr<'a>) -> Vec<Vec<bool>> {
+pub fn _all_assignments<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, vars: &[VarLabel], bdd: BddPtr<'a>) -> Vec<(Vec<bool>, bool)> {
     let polarity = [false, true];
     let nvars = vars.len();
-    let combinations : Vec<Vec<_>> = (0..nvars).map(|_| polarity)
+    let combinations : Vec<(Vec<_>, bool)> = (0..nvars).map(|_| polarity)
         .multi_cartesian_product()
-        .filter(|xs| eval_assignment(builder, bdd, &vars, &xs).expect("assignments are total"))
+        .map(|xs| (xs.clone(), eval_assignment(builder, bdd, &vars, &xs).expect("assignments are total")))
         .collect();
     combinations
 }
 
 pub fn all_models<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>) -> Vec<Vec<bool>> {
     let vars = variables_sorted(&bdd);
-    _all_models(builder, &vars, bdd)
+    _all_assignments(builder, &vars, bdd).iter().filter(|(vs,ev)| *ev).map(|(vs, _ev)| vs.clone()).collect()
 }
 
 pub fn eval_assignment<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>, varlabels: &[VarLabel], xs:&[bool]) -> Option<bool> {

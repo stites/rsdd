@@ -6,7 +6,7 @@ use crate::{
     util::semirings::{Complex, FiniteField, RealSemiring, Semiring},
 };
 #[cfg(feature = "extras")]
-use crate::extras::{_all_models,variables,variables_sorted};
+use crate::extras::{_all_assignments,variables,variables_sorted};
 #[cfg(feature = "extras")]
 use std::mem;
 
@@ -166,27 +166,33 @@ unsafe extern "C" fn bdd_negate(builder: *mut RsddBddBuilder, bdd: *mut BddPtr) 
 unsafe extern "C" fn bdd_compose(
     builder: *mut RsddBddBuilder,
     f: *mut BddPtr,
-    l: VarLabel,
+    l: u64,
     g: *mut BddPtr,
 ) -> *mut BddPtr {
     let builder = robdd_builder_from_ptr(builder);
-    let composed = builder.compose(*f, l, *g);
+    let composed = builder.compose(*f, VarLabel::new(l), *g);
     Box::into_raw(Box::new(composed))
 }
 
 #[no_mangle]
 unsafe extern "C" fn bdd_is_true(bdd: *mut BddPtr) -> bool {
-    (*bdd).is_true()
+    let ret = (*bdd).is_true();
+    // println!("is_true? {}: {}", ret, (*bdd).to_string_debug());
+    ret
 }
 
 #[no_mangle]
 unsafe extern "C" fn bdd_is_false(bdd: *mut BddPtr) -> bool {
-    (*bdd).is_false()
+    let ret = (*bdd).is_false();
+    // println!("is_false? {}: {}", ret, (*bdd).to_string_debug());
+    ret
 }
 
 #[no_mangle]
 unsafe extern "C" fn bdd_is_const(bdd: *mut BddPtr) -> bool {
-    (*bdd).is_const()
+    let ret = (*bdd).is_const();
+    // println!("is_const? {}: {}", ret, (*bdd).to_string_debug());
+    ret
 }
 
 #[no_mangle]
@@ -230,6 +236,7 @@ unsafe extern "C" fn bdd_eq(
     right: *mut BddPtr,
 ) -> bool {
     let builder = robdd_builder_from_ptr(builder);
+    // println!("comparing:\n  {}\n  {}", (*left).to_string_debug(), (*right).to_string_debug());
     builder.eq(*left, *right)
 }
 
@@ -285,6 +292,12 @@ unsafe extern "C" fn bdd_wmc_complex(bdd: *mut BddPtr, wmc: *mut WmcParams<Compl
     DDNNFPtr::unsmoothed_wmc(&(*bdd), &(*wmc))
 }
 
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn num_vars(builder: *mut RsddBddBuilder) -> u64 {
+    let builder = robdd_builder_from_ptr(builder);
+    builder.order().num_vars() as u64
+}
 
 #[no_mangle]
 #[cfg(feature = "extras")]
@@ -310,6 +323,7 @@ pub struct Models {
     pub nvars : usize,
     pub count : usize,
     pub vars : *mut u64,
+    pub assignments : *mut bool,
     pub models : *mut bool,
 }
 
@@ -325,7 +339,9 @@ unsafe extern "C" fn bdd_all_models(
     let vars : Vec<_> = variables_sorted(&bdd);
     let nvars = vars.len();
 
-    let models = _all_models(builder, &vars, bdd);
+    let assignments = _all_assignments(builder, &vars, bdd);
+
+    let models : Vec<Vec<_>> = assignments.iter().filter(|(vs,ev)| *ev).map(|(vs, _ev)| vs.clone()).collect();
     let count = models.len();
 
     let mut models : Vec<_> = models.into_iter().flatten().collect();
@@ -334,11 +350,105 @@ unsafe extern "C" fn bdd_all_models(
     let mptr = models.as_mut_ptr();
     mem::forget(models);
 
+    let mut assignments : Vec<_> = assignments.into_iter().map(|(vs, _ev)| vs).flatten().collect();
+    assignments.shrink_to_fit();
+    assert!(assignments.len() == assignments.capacity());
+    let aptr = assignments.as_mut_ptr();
+    mem::forget(assignments);
+
     let mut vars : Vec<_> = vars.into_iter().map(|x| x.value()).collect();
     vars.shrink_to_fit();
     assert!(vars.len() == vars.capacity());
     let vptr = vars.as_mut_ptr();
     mem::forget(vars);
 
-    Models { nvars, count, vars : vptr, models: mptr }
+    Models { nvars, count, vars : vptr, assignments: aptr, models: mptr }
+}
+
+
+#[no_mangle]
+unsafe extern "C" fn bdd_condition(
+    builder: *mut RsddBddBuilder,
+    ptr :  *mut BddPtr,
+    label: u64,
+    pol: bool,
+) -> *mut BddPtr {
+    let builder = robdd_builder_from_ptr(builder);
+    let res = builder.condition(*ptr, VarLabel::new(label), pol);
+    Box::into_raw(Box::new(res))
+}
+
+
+mod test {
+    use super::*;
+    use repr::*;
+
+    use libc::c_char;
+    use std::ffi::CStr;
+    use std::str;
+
+
+    #[test]
+    fn simple_cond() {
+        unsafe {
+            //  the equivalent test of simple_cond in bdd/robdd.rs, but using an FFI for equlity
+            let mut vo  = var_order_linear(3);
+            let mut builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+            let mut x = bdd_var(builder, 0, true);
+            let mut y = bdd_var(builder, 1, false);
+            let mut z = bdd_var(builder, 2, false);
+            let r1 = bdd_and(builder, x, y);
+            let r2 = bdd_and(builder, r1, z);
+            // now r2 is x /\ !y /\ !z
+
+            let res = bdd_condition(builder, r2, 1, true); // condition on y=T
+            let expected = bdd_false(builder);
+
+            let r2_buf : *const c_char = print_bdd(r2);
+            let r2_str: &CStr = unsafe { CStr::from_ptr(r2_buf) };
+            let r2_str_slice: &str = r2_str.to_str().unwrap();
+
+            let res_buf : *const c_char = print_bdd(res);
+            let res_str: &CStr = unsafe { CStr::from_ptr(res_buf) };
+            let res_str_slice: &str = res_str.to_str().unwrap();
+
+            let expected_buf : *const c_char = print_bdd(expected);
+            let expected_str: &CStr = unsafe { CStr::from_ptr(expected_buf) };
+            let expected_str_slice: &str = expected_str.to_str().unwrap();
+            assert!(
+                !(bdd_eq(builder, r2, expected)),
+                "\nOriginal BDD: {}\nNot eq:\n  Got: {}\n  Expected: {}",
+                r2_str_slice,
+                r2_str_slice,
+                expected_str_slice
+            );
+            assert!(
+                bdd_eq(builder, res, expected),
+                "\nOriginal BDD: {}\nNot eq:\n  Got: {}\n  Expected: {}",
+                r2_str_slice,
+                res_str_slice,
+                expected_str_slice
+            );
+        }
+    }
+
+    #[test]
+    fn compare_constants() {
+        unsafe {
+            //  the equivalent test of simple_cond in bdd/robdd.rs, but using an FFI for equlity
+            let mut vo  = var_order_linear(3);
+            let mut builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+            let mut x = bdd_var(builder, 0, true);
+            let mut y = bdd_var(builder, 1, false);
+            let x_and_y = bdd_and(builder, x, y);
+
+            let x_and_y_buf : *const c_char = print_bdd(x_and_y);
+            let x_and_y_str: &CStr = unsafe { CStr::from_ptr(x_and_y_buf) };
+            let x_and_y_str_slice: &str = x_and_y_str.to_str().unwrap();
+
+            assert!(!(bdd_is_true(x_and_y)), "\nERR: BDD == true: {}", x_and_y_str_slice);
+            assert!(!(bdd_is_false(x_and_y)), "\nERR: BDD == false: {}", x_and_y_str_slice);
+            assert!(!(bdd_is_const(x_and_y)), "\nERR: BDD is a constant: {}", x_and_y_str_slice);
+        }
+    }
 }
