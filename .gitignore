@@ -14,3 +14,7 @@ sdd.json
 vtree.json
 err.txt
 rand.cnf
+
+.direnv
+.envrc
+result

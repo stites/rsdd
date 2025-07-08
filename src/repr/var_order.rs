@@ -57,6 +57,16 @@ impl VarOrder {
         self.var_to_pos[var.value() as usize]
     }
 
+    /// Get the position of `var` in the order, or insert labels up to `var` as a new label at the end of the order
+    pub fn get_or_insert_till(&mut self, var: VarLabel) -> usize {
+        let varval = var.value() as usize;
+        while self.var_to_pos.len() <= varval {
+            self.new_last();
+        }
+        // assert!(self.last_var() == var);
+        self.get(var)
+    }
+
     /// Fetches the variable that it as the specified position in the order
     /// ```
     /// # use rsdd::repr::VarOrder;
@@ -290,4 +300,19 @@ fn var_order_basics() {
     assert!(order.lt(lbl1, lbl2));
     assert!(!order.lt(lbl2, lbl1));
     assert_eq!(order.above(lbl2).unwrap(), lbl1);
+}
+
+#[test]
+fn var_insert_till() {
+    let mut order = VarOrder::linear_order(5);
+    let lbl1 = VarLabel::new(3);
+    let lbl2 = VarLabel::new(4);
+    assert_eq!(order.get_or_insert_till(lbl1), 3);
+    assert_eq!(order.get_or_insert_till(lbl2), 4);
+    assert_eq!(order.num_vars(), 5);
+
+    let lbl10 = VarLabel::new(10);
+    assert_eq!(order.get_or_insert_till(lbl10), 10);
+    assert_eq!(order.num_vars(), 11);
+    assert_eq!(order.last_var(), lbl10);
 }

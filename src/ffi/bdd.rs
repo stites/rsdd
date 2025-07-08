@@ -6,7 +6,7 @@ use crate::{
     util::semirings::{Complex, FiniteField, RealSemiring, Semiring},
 };
 #[cfg(feature = "extras")]
-use crate::extras::{all_models_flat,variables_sorted};
+use crate::extras::{_all_models,variables,variables_sorted};
 #[cfg(feature = "extras")]
 use std::mem;
 
@@ -296,31 +296,21 @@ unsafe extern "C" fn bdd_variables_sorted(rbdd: *mut BddPtr) -> *mut u64 {
   ptr
 }
 
+#[no_mangle]
+#[cfg(feature = "extras")]
+unsafe extern "C" fn bdd_variables_len(rbdd: *mut BddPtr) -> u64 {
+  let bdd = *rbdd;
+  variables(&bdd).len() as u64
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, Eq, Copy, PartialOrd, Ord)]
 #[cfg(feature = "extras")]
 pub struct Models {
-    nvars : usize,
-    count : usize,
-    models : *mut bool,
-}
-
-#[no_mangle]
-#[cfg(feature = "extras")]
-unsafe extern "C" fn models_nvars(ms: *mut Models) -> usize {
-    (*ms).nvars
-}
-
-#[no_mangle]
-#[cfg(feature = "extras")]
-unsafe extern "C" fn models_count(ms: *mut Models) -> usize {
-    (*ms).count
-}
-
-#[no_mangle]
-#[cfg(feature = "extras")]
-unsafe extern "C" fn models_flatlist(ms: *mut Models) -> *mut bool {
-    (*ms).models
+    pub nvars : usize,
+    pub count : usize,
+    pub vars : *mut u64,
+    pub models : *mut bool,
 }
 
 #[no_mangle]
@@ -328,17 +318,27 @@ unsafe extern "C" fn models_flatlist(ms: *mut Models) -> *mut bool {
 unsafe extern "C" fn bdd_all_models(
     builder: *mut RsddBddBuilder,
     rbdd: *mut BddPtr,
-) -> *mut Models {
+) -> Models {
     let builder = robdd_builder_from_ptr(builder);
-    let nvars = builder.order().num_vars();
-
     let bdd = *rbdd;
 
-    let mut vec = all_models_flat(builder, bdd);
-    let count = vec.len();
-    let ptr = vec.as_mut_ptr();
-    mem::forget(vec);
-    let ms = Models { nvars, count, models: ptr };
-    Box::into_raw(Box::new(ms))
-}
+    let vars : Vec<_> = variables_sorted(&bdd);
+    let nvars = vars.len();
 
+    let models = _all_models(builder, &vars, bdd);
+    let count = models.len();
+
+    let mut models : Vec<_> = models.into_iter().flatten().collect();
+    models.shrink_to_fit();
+    assert!(models.len() == models.capacity());
+    let mptr = models.as_mut_ptr();
+    mem::forget(models);
+
+    let mut vars : Vec<_> = vars.into_iter().map(|x| x.value()).collect();
+    vars.shrink_to_fit();
+    assert!(vars.len() == vars.capacity());
+    let vptr = vars.as_mut_ptr();
+    mem::forget(vars);
+
+    Models { nvars, count, vars : vptr, models: mptr }
+}

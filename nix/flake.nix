@@ -5,7 +5,7 @@
   };
   outputs = inputs@{ ... }: inputs.flake-parts.lib.mkFlake { inherit inputs; } {
     imports = [  ];
-    systems = [ "x86_64-linux" ];
+    systems = [ "x86_64-linux" "aarch64-linux" ];
     perSystem = { config, pkgs, ... }: {
       packages = rec {
         default = rsdd-debug;
