@@ -27,6 +27,7 @@ rational = "1.2.2"
 clap = { version = "4.2.1", features = ["derive"], optional = true }
 serde_json = { version = "1.0.81", optional = true }
 itertools = { version = "0.10.3", optional = true }
+libc = "0.2.174"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }

@@ -341,6 +341,7 @@ unsafe extern "C" fn bdd_all_models(
     let nvars = vars.len();
 
     let assignments = _all_assignments(builder, &vars, bdd);
+    let nassignments = assignments.len();
 
     let mut models : Vec<_> = assignments.iter().enumerate().filter(|(ix, (vs, ev))| *ev).map(|(ix, (vs, ev))| ix as u64).collect();
     let nmodels = models.len();
@@ -350,7 +351,6 @@ unsafe extern "C" fn bdd_all_models(
     mem::forget(models);
 
     let mut assignments : Vec<_> = assignments.into_iter().map(|(vs, _ev)| vs).flatten().collect();
-    let nassignments = assignments.len();
     assignments.shrink_to_fit();
     assert!(assignments.len() == assignments.capacity());
     let aptr = assignments.as_mut_ptr();
