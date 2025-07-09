@@ -321,10 +321,11 @@ unsafe extern "C" fn bdd_variables_len(rbdd: *mut BddPtr) -> u64 {
 #[cfg(feature = "extras")]
 pub struct Models {
     pub nvars : usize,
-    pub count : usize,
+    pub nmodels : usize,
+    pub nassignments : usize,
     pub vars : *mut u64,
+    pub models : *mut u64,
     pub assignments : *mut bool,
-    pub models : *mut bool,
 }
 
 #[no_mangle]
@@ -341,16 +342,15 @@ unsafe extern "C" fn bdd_all_models(
 
     let assignments = _all_assignments(builder, &vars, bdd);
 
-    let models : Vec<Vec<_>> = assignments.iter().filter(|(vs,ev)| *ev).map(|(vs, _ev)| vs.clone()).collect();
-    let count = models.len();
-
-    let mut models : Vec<_> = models.into_iter().flatten().collect();
+    let mut models : Vec<_> = assignments.iter().enumerate().filter(|(ix, (vs, ev))| *ev).map(|(ix, (vs, ev))| ix as u64).collect();
+    let nmodels = models.len();
     models.shrink_to_fit();
     assert!(models.len() == models.capacity());
     let mptr = models.as_mut_ptr();
     mem::forget(models);
 
     let mut assignments : Vec<_> = assignments.into_iter().map(|(vs, _ev)| vs).flatten().collect();
+    let nassignments = assignments.len();
     assignments.shrink_to_fit();
     assert!(assignments.len() == assignments.capacity());
     let aptr = assignments.as_mut_ptr();
@@ -362,7 +362,7 @@ unsafe extern "C" fn bdd_all_models(
     let vptr = vars.as_mut_ptr();
     mem::forget(vars);
 
-    Models { nvars, count, vars : vptr, assignments: aptr, models: mptr }
+    Models { nvars, nmodels, nassignments, vars : vptr, assignments: aptr, models: mptr }
 }
 
 
