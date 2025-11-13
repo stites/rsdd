@@ -378,6 +378,17 @@ unsafe extern "C" fn bdd_condition(
     Box::into_raw(Box::new(res))
 }
 
+#[no_mangle]
+unsafe extern "C" fn bdd_exists(
+    builder: *mut RsddBddBuilder,
+    ptr :  *mut BddPtr,
+    label: u64,
+) -> *mut BddPtr {
+    let builder = robdd_builder_from_ptr(builder);
+    // print!("label {}, pol {}\t\tbdd: {:?}", label, pol, (*ptr));
+    let res = builder.exists(*ptr, VarLabel::new(label));
+    Box::into_raw(Box::new(res))
+}
 
 mod test {
     use super::*;
