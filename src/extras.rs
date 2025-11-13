@@ -45,7 +45,7 @@ pub fn _all_assignments<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a
 
 pub fn all_models<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>) -> Vec<Vec<bool>> {
     let vars = variables_sorted(&bdd);
-    _all_assignments(builder, &vars, bdd).iter().filter(|(vs,ev)| *ev).map(|(vs, _ev)| vs.clone()).collect()
+    _all_assignments(builder, &vars, bdd).iter().filter(|(_vs,ev)| *ev).map(|(vs, _ev)| vs.clone()).collect()
 }
 
 pub fn eval_assignment<'a, T: IteTable<'a, BddPtr<'a>> + Default> (builder: &'a RobddBuilder<'a, T>, bdd: BddPtr<'a>, varlabels: &[VarLabel], xs:&[bool]) -> Option<bool> {

@@ -343,7 +343,7 @@ unsafe extern "C" fn bdd_all_models(
     let assignments = _all_assignments(builder, &vars, bdd);
     let nassignments = assignments.len();
 
-    let mut models : Vec<_> = assignments.iter().enumerate().filter(|(ix, (vs, ev))| *ev).map(|(ix, (vs, ev))| ix as u64).collect();
+    let mut models : Vec<_> = assignments.iter().enumerate().filter(|(_ix, (_vs, ev))| *ev).map(|(ix, (_vs, _ev))| ix as u64).collect();
     let nmodels = models.len();
     models.shrink_to_fit();
     assert!(models.len() == models.capacity());
@@ -392,22 +392,16 @@ unsafe extern "C" fn bdd_exists(
 
 mod test {
     use super::*;
-    use repr::*;
-
-    use libc::c_char;
-    use std::ffi::CStr;
-    use std::str;
-
 
     #[test]
     fn simple_cond() {
         unsafe {
             //  the equivalent test of simple_cond in bdd/robdd.rs, but using an FFI for equlity
-            let mut vo  = var_order_linear(3);
-            let mut builder = robdd_builder_all_table( vo as *mut VarOrder) ;
-            let mut x = bdd_var(builder, 0, true);
-            let mut y = bdd_var(builder, 1, false);
-            let mut z = bdd_var(builder, 2, false);
+            let vo  = var_order_linear(3);
+            let builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+            let x = bdd_var(builder, 0, true);
+            let y = bdd_var(builder, 1, false);
+            let z = bdd_var(builder, 2, false);
             let r1 = bdd_and(builder, x, y);
             let r2 = bdd_and(builder, r1, z);
             // now r2 is x /\ !y /\ !z
@@ -416,15 +410,15 @@ mod test {
             let expected = bdd_false(builder);
 
             let r2_buf : *const c_char = print_bdd(r2);
-            let r2_str: &CStr = unsafe { CStr::from_ptr(r2_buf) };
+            let r2_str: &CStr = CStr::from_ptr(r2_buf);
             let r2_str_slice: &str = r2_str.to_str().unwrap();
 
             let res_buf : *const c_char = print_bdd(res);
-            let res_str: &CStr = unsafe { CStr::from_ptr(res_buf) };
+            let res_str: &CStr = CStr::from_ptr(res_buf);
             let res_str_slice: &str = res_str.to_str().unwrap();
 
             let expected_buf : *const c_char = print_bdd(expected);
-            let expected_str: &CStr = unsafe { CStr::from_ptr(expected_buf) };
+            let expected_str: &CStr = CStr::from_ptr(expected_buf);
             let expected_str_slice: &str = expected_str.to_str().unwrap();
             assert!(
                 !(bdd_eq(builder, r2, expected)),
@@ -444,17 +438,62 @@ mod test {
     }
 
     #[test]
+    fn simple_cond2() {
+       unsafe {
+           let vo  = var_order_linear(0);
+           let builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+           let _l0 = bdd_new_label(builder);
+           let _l1 = bdd_new_label(builder);
+           let _l2 = bdd_new_label(builder);
+           let v0 = bdd_var(builder, 0, true);
+           let v1 = bdd_var(builder, 1, true);
+           let v2 = bdd_var(builder, 2, true);
+           let bdd = bdd_negate(builder, v2);
+           let bdd = bdd_or(builder, v1, bdd);
+           let bdd = bdd_ite(builder, v0, bdd, v1);
+           // println!("{}", (*bdd).print_bdd()); // (0, (1, F, T), (1, !(2, F, T), T))
+           let _cond_bdd = bdd_condition(builder, bdd, 2, true);
+           let _cond_q0 = bdd_condition(builder, v0, 2, true);
+           let _cond_q1 = bdd_condition(builder, v1, 2, true);
+           // if cond_bdd occurs here, we will not segfault
+       }
+    }
+
+    #[test]
+    fn simple_cond_exists() {
+       unsafe {
+           let vo  = var_order_linear(0);
+           let builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+           let _l0 = bdd_new_label(builder);
+           let _l1 = bdd_new_label(builder);
+           let _l2 = bdd_new_label(builder);
+           let v0 = bdd_var(builder, 0, true);
+           let v1 = bdd_var(builder, 1, true);
+           let v2 = bdd_var(builder, 2, true);
+
+           let bdd = bdd_negate(builder, v2);
+           let bdd = bdd_or(builder, v1, bdd);
+           let bdd = bdd_ite(builder, v0, bdd, v1);
+           println!("{}", (*bdd).print_bdd()); // (0, (1, F, T), (1, !(2, F, T), T))
+           let _cond_q0 = bdd_exists(builder, v0, 2);
+           let _cond_q1 = bdd_exists(builder, v1, 2);
+           let _cond_bdd = bdd_exists(builder, bdd, 2);
+       }
+    }
+
+
+    #[test]
     fn compare_constants() {
         unsafe {
             //  the equivalent test of simple_cond in bdd/robdd.rs, but using an FFI for equlity
-            let mut vo  = var_order_linear(3);
-            let mut builder = robdd_builder_all_table( vo as *mut VarOrder) ;
-            let mut x = bdd_var(builder, 0, true);
-            let mut y = bdd_var(builder, 1, false);
+            let vo  = var_order_linear(3);
+            let builder = robdd_builder_all_table( vo as *mut VarOrder) ;
+            let x = bdd_var(builder, 0, true);
+            let y = bdd_var(builder, 1, false);
             let x_and_y = bdd_and(builder, x, y);
 
             let x_and_y_buf : *const c_char = print_bdd(x_and_y);
-            let x_and_y_str: &CStr = unsafe { CStr::from_ptr(x_and_y_buf) };
+            let x_and_y_str: &CStr = CStr::from_ptr(x_and_y_buf);
             let x_and_y_str_slice: &str = x_and_y_str.to_str().unwrap();
 
             assert!(!(bdd_is_true(x_and_y)), "\nERR: BDD == true: {}", x_and_y_str_slice);
