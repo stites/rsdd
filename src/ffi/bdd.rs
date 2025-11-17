@@ -240,6 +240,13 @@ unsafe extern "C" fn bdd_eq(
     builder.eq(*left, *right)
 }
 
+/// free the BDD manager `mgr`
+#[no_mangle]
+unsafe extern "C" fn free_bdd_manager(mgr : *mut RsddBddBuilder) -> () {
+    drop(Box::from_raw(mgr));
+}
+
+
 #[no_mangle]
 unsafe extern "C" fn bdd_topvar(bdd: *mut BddPtr) -> u64 {
     match (*bdd).var_safe() {
@@ -502,3 +509,4 @@ mod test {
         }
     }
 }
+
